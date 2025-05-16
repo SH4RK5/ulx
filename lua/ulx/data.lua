@@ -493,11 +493,11 @@ files["motd.txt"] =
 }
 ]]
 
-ULib.fileCreateDir( "data/ulx" ) -- This is ignored if the folder already exists
-for filename, content in pairs( files ) do
+ULib.fileCreateDir("data/ulx")   -- This is ignored if the folder already exists
+for filename, content in pairs(files) do
 	local filepath = "data/ulx/" .. filename
-	if not ULib.fileExists( filepath, true ) then
-		ULib.fileWrite( filepath, content )
+	if not ULib.fileExists(filepath, true) then
+		ULib.fileWrite(filepath, content)
 	end
 end
 files = nil -- Cleanup

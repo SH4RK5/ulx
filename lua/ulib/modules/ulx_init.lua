@@ -1,5 +1,5 @@
 if SERVER then
-	include( "ulx/init.lua" )
+	include("ulx/init.lua")
 else
-	include( "ulx/cl_init.lua" )
+	include("ulx/cl_init.lua")
 end

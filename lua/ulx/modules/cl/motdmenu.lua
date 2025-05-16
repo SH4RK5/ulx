@@ -3,52 +3,52 @@ ulx.motdmenu_exists = true
 local mode
 local url
 
-function ulx.showMotdMenu( steamid )
+function ulx.showMotdMenu(steamid)
 	if mode == nil then
 		return -- No data provided
 	end
 
-	local window = vgui.Create( "DFrame" )
+	local window = vgui.Create("DFrame")
 	if ScrW() > 640 then -- Make it larger if we can.
-		window:SetSize( ScrW()*0.9, ScrH()*0.9 )
+		window:SetSize(ScrW() * 0.9, ScrH() * 0.9)
 	else
-		window:SetSize( 640, 480 )
+		window:SetSize(640, 480)
 	end
 	window:Center()
-	window:SetTitle( "ULX MOTD" )
-	window:SetVisible( true )
+	window:SetTitle("ULX MOTD")
+	window:SetVisible(true)
 	window:MakePopup()
 
-	local html = vgui.Create( "DHTML", window )
+	local html = vgui.Create("DHTML", window)
 	--html:SetAllowLua( true ) -- Too much of a security risk for us to enable. Feel free to uncomment if you know what you're doing.
 
-	local button = vgui.Create( "DButton", window )
-	button:SetText( "Close" )
+	local button = vgui.Create("DButton", window)
+	button:SetText("Close")
 	button.DoClick = function() window:Close() end
-	button:SetSize( 100, 40 )
-	button:SetPos( (window:GetWide() - button:GetWide()) / 2, window:GetTall() - button:GetTall() - 10 )
+	button:SetSize(100, 40)
+	button:SetPos((window:GetWide() - button:GetWide()) / 2, window:GetTall() - button:GetTall() - 10)
 
-	html:SetSize( window:GetWide() - 20, window:GetTall() - button:GetTall() - 50 )
-	html:SetPos( 10, 30 )
-	if mode == "1" then -- file
-		html:SetHTML( ULib.fileRead( "data/ulx_motd.txt" ) or "" )
+	html:SetSize(window:GetWide() - 20, window:GetTall() - button:GetTall() - 50)
+	html:SetPos(10, 30)
+	if mode == "1" then  -- file
+		html:SetHTML(ULib.fileRead("data/ulx_motd.txt") or "")
 	elseif mode == "2" then -- generator
-		html:SetHTML( ulx.generateMotdHTML() or "" )
-	else -- URL
-		url = string.gsub( url, "%%curmap%%", game.GetMap() )
-		url = string.gsub( url, "%%steamid%%", steamid )
-		html:OpenURL( url )
+		html:SetHTML(ulx.generateMotdHTML() or "")
+	else                 -- URL
+		url = string.gsub(url, "%%curmap%%", game.GetMap())
+		url = string.gsub(url, "%%steamid%%", steamid)
+		html:OpenURL(url)
 	end
 end
 
-function ulx.rcvMotd( mode_, data )
+function ulx.rcvMotd(mode_, data)
 	mode = mode_
-	if mode == "1" then -- file
-		ULib.fileWrite( "data/ulx_motd.txt", data )
+	if mode == "1" then  -- file
+		ULib.fileWrite("data/ulx_motd.txt", data)
 	elseif mode == "2" then -- generator
 		ulx.motdSettings = data
-	else -- URL
-		if data:find( "://", 1, true ) then
+	else                 -- URL
+		if data:find("://", 1, true) then
 			url = data
 		else
 			url = "http://" .. data
@@ -202,22 +202,22 @@ end
 
 local function renderItemTemplate(items, template)
 	local output = ""
-	for i=1, #items do
-		output = output .. string.gsub( template, "%%content%%", escape(items[i] or ""))
+	for i = 1, #items do
+		output = output .. string.gsub(template, "%%content%%", escape(items[i] or ""))
 	end
 	return output
 end
 
 local function renderMods()
 	local output = ""
-	for a=1, #ulx.motdSettings.addons do
+	for a = 1, #ulx.motdSettings.addons do
 		local addon = ulx.motdSettings.addons[a]
 		if addon.workshop_id then
-			local item = string.gsub( template_item_workshop, "%%title%%", escape(addon.title) )
-			output = output .. string.gsub( item, "%%workshop_id%%", escape(addon.workshop_id or "") )
+			local item = string.gsub(template_item_workshop, "%%title%%", escape(addon.title))
+			output = output .. string.gsub(item, "%%workshop_id%%", escape(addon.workshop_id or ""))
 		else
-			local item = string.gsub( template_item_addon, "%%title%%", escape(addon.title or "") )
-			output = output .. string.gsub( item, "%%author%%", escape(addon.author or "") )
+			local item = string.gsub(template_item_addon, "%%title%%", escape(addon.title or ""))
+			output = output .. string.gsub(item, "%%author%%", escape(addon.author or ""))
 		end
 	end
 
@@ -227,47 +227,43 @@ end
 function ulx.generateMotdHTML()
 	if ulx.motdSettings == nil or ulx.motdSettings.info == nil then return template_error end
 
-	local header = string.gsub( template_header, "%%hostname%%", escape(GetHostName() or "") )
-	header = string.gsub( header, "{{(.-)}}", function(a)
+	local header = string.gsub(template_header, "%%hostname%%", escape(GetHostName() or ""))
+	header = string.gsub(header, "{{(.-)}}", function(a)
 		local success, value = ULib.findVar(a, ulx.motdSettings)
-		return escape( value or "")
-	end )
+		return escape(value or "")
+	end)
 
 	local body = ""
 
-	for i=1, #ulx.motdSettings.info do
+	for i = 1, #ulx.motdSettings.info do
 		local data = ulx.motdSettings.info[i]
 		local content = ""
 
 		if data.type == "text" then
-			content = string.gsub( template_section_p, "%%items%%", renderItemTemplate(data.contents, template_item_br) )
-
+			content = string.gsub(template_section_p, "%%items%%", renderItemTemplate(data.contents, template_item_br))
 		elseif data.type == "ordered_list" then
-			content = string.gsub( template_section_ol, "%%items%%", renderItemTemplate(data.contents, template_item_li) )
-
+			content = string.gsub(template_section_ol, "%%items%%", renderItemTemplate(data.contents, template_item_li))
 		elseif data.type == "list" then
-			content = string.gsub( template_section_ul, "%%items%%", renderItemTemplate(data.contents, template_item_li) )
-
+			content = string.gsub(template_section_ul, "%%items%%", renderItemTemplate(data.contents, template_item_li))
 		elseif data.type == "mods" then
-			content = string.gsub( template_section_ul, "%%items%%", renderMods() )
-
+			content = string.gsub(template_section_ul, "%%items%%", renderMods())
 		elseif data.type == "admins" then
 			local users = {}
-			for g=1, #data.contents do
+			for g = 1, #data.contents do
 				local group = data.contents[g]
 				if ulx.motdSettings.admins[group] then
-					for u=1, #ulx.motdSettings.admins[group] do
-						table.insert( users, ulx.motdSettings.admins[group][u] )
+					for u = 1, #ulx.motdSettings.admins[group] do
+						table.insert(users, ulx.motdSettings.admins[group][u])
 					end
 				end
 			end
-			table.sort( users )
-			content = string.gsub( template_section_ul, "%%items%%", renderItemTemplate(users, template_item_li) )
+			table.sort(users)
+			content = string.gsub(template_section_ul, "%%items%%", renderItemTemplate(users, template_item_li))
 		end
 
-		local section = string.gsub( template_section, "%%title%%", escape(data.title or "") )
-		body = body .. string.gsub( section, "%%content%%", content )
+		local section = string.gsub(template_section, "%%title%%", escape(data.title or ""))
+		body = body .. string.gsub(section, "%%content%%", content)
 	end
 
-	return string.format( "%s%s%s", header, body, template_footer )
+	return string.format("%s%s%s", header, body, template_footer)
 end

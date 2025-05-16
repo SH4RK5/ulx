@@ -78,8 +78,8 @@ ulx groupdeny <group> <access> - Removes the group's access.
 ]]
 
 function ulx.showUserHelp()
-	local lines = ULib.explode( "\n", help )
-	for _, line in ipairs( lines ) do
-		Msg( line .. "\n" )
+	local lines = ULib.explode("\n", help)
+	for _, line in ipairs(lines) do
+		Msg(line .. "\n")
 	end
 end
