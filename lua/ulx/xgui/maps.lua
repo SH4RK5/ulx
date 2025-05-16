@@ -1,6 +1,9 @@
 --Maps module for ULX GUI -- by Stickly Man!
 --Lists maps on server, allows for map voting, changing levels, etc. All players may access this menu.
 
+local defaultPrefix = "ttt_"
+local currentPrefix = defaultPrefix
+
 ulx.votemaps = ulx.votemaps or {}
 xgui.prepareDataType("votemaps", ulx.votemaps)
 local maps = xlib.makepanel { parent = xgui.null }
@@ -12,12 +15,15 @@ maps.curmap = xlib.makelabel { x = 187, y = 223, w = 192, label = "No Map Select
 maps.list = xlib.makelistview { x = 5, y = 30, w = 175, h = 310, multiselect = true, parent = maps, headerheight = 0 } --Remember to enable/disable multiselect based on admin status?
 maps.list:AddColumn("Map Name")
 maps.list.OnRowSelected = function(self, LineID, Line)
-	if (ULib.fileExists("maps/thumb/" .. maps.list:GetSelected()[1]:GetColumnText(1) .. ".png")) then
-		maps.disp:SetMaterial(Material("maps/thumb/" .. maps.list:GetSelected()[1]:GetColumnText(1) .. ".png"))
+	-- Get the selected map name
+	local mapname = maps.list:GetSelected()[1]:GetColumnText(1)
+
+	if (ULib.fileExists("maps/thumb/" .. string.gsub(mapname, "_sh4rk5$", "") .. ".png")) then
+		maps.disp:SetMaterial(Material("maps/thumb/" .. string.gsub(mapname, "_sh4rk5$", "") .. ".png"))
 	else
 		maps.disp:SetMaterial(Material("maps/thumb/noicon.png"))
 	end
-	maps.curmap:SetText(Line:GetColumnText(1))
+	maps.curmap:SetText(mapname)
 	maps.updateButtonStates()
 end
 
@@ -67,16 +73,69 @@ end
 maps.nextLevelLabel = xlib.makelabel { x = 382, y = 13, label = "Nextlevel (cvar)", parent = maps }
 maps.nextlevel = xlib.makecombobox { x = 382, y = 30, w = 180, h = 20, repconvar = "rep_nextlevel", convarblanklabel = "<not specified>", parent = maps }
 
+maps.mapPrefixFilterLabel = xlib.makelabel { x = 382, y = 55, label = "Map Prefix Filter", parent = maps }
+maps.mapPrefixFilter = xlib.makecombobox { x = 382, y = (55 + 17), w = 180, h = 20, convarblanklabel = currentPrefix, parent = maps }
+
+maps.mapPrefixFilter.OnSelect = function(self, index, value, data)
+	currentPrefix = value
+	maps.updateVoteMaps()
+end
+
+local prefixListLoaded = false
+
+function maps.updatePrefixList()
+	if prefixListLoaded then return end
+
+	maps.mapPrefixFilter:Clear()
+
+	local lastPrefix = ""
+
+	for _, v in ipairs(ulx.maps) do
+		local mapParts = string.Split(v, "_")
+		local currentPrefix = string.lower(mapParts[1]) .. "_"
+		if (currentPrefix ~= lastPrefix) then
+			if not string.StartsWith(v, currentPrefix) then continue end -- check if its actually a prefix and not the whole map name! -- we have to use continue since glua does not allow break?
+			local item = maps.mapPrefixFilter:AddChoice(currentPrefix)
+		end
+		lastPrefix = currentPrefix
+	end
+
+	prefixListLoaded = true
+end
+
+maps.updatePrefixList()
+
 function maps.addMaptoList(mapname, lastselected)
+	local prefix = currentPrefix
+	local lowerMapname = string.lower(mapname)
+
+	if not string.StartsWith(lowerMapname, prefix) then return end
+
 	local line = maps.list:AddLine(mapname)
 	if table.HasValue(lastselected, mapname) then
 		maps.list:SelectItem(line)
 	end
+
+	-- autoselect current map
+	if game.GetMap() == mapname then
+		maps.list:SelectItem(line)
+	end
+
 	line.isNotVotemap = nil
 	if not table.HasValue(ulx.votemaps, mapname) then
 		line:SetAlpha(128)
 		line.isNotVotemap = true
 	end
+end
+
+maps.reloadMap = xlib.makebutton { x = 382, y = (55 + 17 + 20 + 5), w = 180, label = "Reload Map", parent = maps }
+maps.reloadMap.DoClick = function()
+	Derma_Query("Are you sure you would like to reload the current map?",
+		"XGUI WARNING",
+		"Change Level", function()
+			RunConsoleCommand("ulx", "map", game.GetMap())
+		end,
+		"Cancel", function() end)
 end
 
 function maps.updateVoteMaps()
@@ -92,8 +151,11 @@ function maps.updateVoteMaps()
 		maps.maplabel:SetText("Server Maps (Votemaps are highlighted)")
 		maps.nextlevel:AddChoice("<not specified>")
 		maps.nextlevel.ConVarUpdated("nextlevel", "rep_nextlevel", nil, nil, GetConVar("rep_nextlevel"):GetString())
-		maps.nextLevelLabel:SetAlpha(255);
+		maps.nextLevelLabel:SetAlpha(255)
 		maps.nextlevel:SetDisabled(false)
+		maps.mapPrefixFilterLabel:SetAlpha(255)
+		maps.mapPrefixFilter:SetDisabled(false)
+
 		for _, v in ipairs(ulx.maps) do
 			maps.addMaptoList(v, lastselected)
 			maps.nextlevel:AddChoice(v)
@@ -103,6 +165,9 @@ function maps.updateVoteMaps()
 		maps.nextLevelLabel:SetAlpha(0);
 		maps.nextlevel:SetDisabled(true)
 		maps.nextlevel:SetAlpha(0);
+		maps.mapPrefixFilterLabel:SetAlpha(0);
+		maps.mapPrefixFilter:SetDisabled(true)
+		maps.mapPrefixFilter:SetAlpha(0);
 		for _, v in ipairs(ulx.votemaps) do --Show the list of votemaps for users without access to "ulx map"
 			maps.addMaptoList(v, lastselected)
 		end
@@ -115,7 +180,7 @@ function maps.updateVoteMaps()
 	maps.updateButtonStates()
 
 	ULib.cmds.translatedCmds["ulx votemap"].args[2].completes = xgui.data
-	.votemaps                                                                   --Set concommand completes for the ulx votemap command. (Used by XGUI in the cmds tab)
+		.votemaps --Set concommand completes for the ulx votemap command. (Used by XGUI in the cmds tab)
 end
 
 function maps.updateGamemodes()
