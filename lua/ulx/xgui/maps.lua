@@ -100,6 +100,8 @@ function maps.updatePrefixList()
 		lastPrefix = currentPrefix
 	end
 
+	maps.mapPrefixFilter:SetValue(currentPrefix)
+
 	prefixListLoaded = true
 end
 
